@@ -4,6 +4,7 @@ import com.example.quant.entity.StockKline;
 import com.example.quant.mapper.StockIndicatorMapper;
 import com.example.quant.mapper.StockKlineMapper;
 import com.example.quant.mapper.UserStockMapper;
+import com.example.quant.util.DeepSeekClient;
 import com.example.quant.util.SinaFinanceClient;
 import org.junit.jupiter.api.Test;
 
@@ -42,6 +43,29 @@ class StockServiceImplTest {
         ordered.verify(klineMapper).deleteByCode("000001");
         ordered.verify(klineMapper).upsert(kline);
         ordered.verify(indicatorMapper).upsert(any());
+    }
+
+    @Test
+    void chatAllowsGeneralQuestionWithoutStockCode() {
+        DeepSeekClient deepSeekClient = new DeepSeekClient("", "", "") {
+            @Override
+            public String chat(String prompt) {
+                return prompt;
+            }
+        };
+        StockServiceImpl service = new StockServiceImpl(
+                mock(StockKlineMapper.class),
+                mock(StockIndicatorMapper.class),
+                mock(UserStockMapper.class),
+                new SinaFinanceClient(),
+                deepSeekClient
+        );
+
+        String content = service.chat("", "请介绍一下什么是夏普比率", "").content();
+
+        org.assertj.core.api.Assertions.assertThat(content)
+                .contains("请介绍一下什么是夏普比率")
+                .doesNotContain("股票代码：");
     }
 
     private static StockKline kline(String code, LocalDate date) {

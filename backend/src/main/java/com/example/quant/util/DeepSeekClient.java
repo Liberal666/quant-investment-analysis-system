@@ -74,7 +74,7 @@ public class DeepSeekClient {
             Map<String, Object> body = Map.of(
                     "model", model,
                     "messages", List.of(
-                            Map.of("role", "system", "content", "你是量化投资绩效分析系统中的AI助手。回答要基于用户提供的股票行情和指标，给出风险解释、指标含义和操作注意事项。不要承诺收益，控制在180字以内。"),
+                            Map.of("role", "system", "content", "你是量化投资绩效分析系统中的通用AI助手。可以回答金融、技术、项目部署、课程设计和日常问题；如果用户提供股票行情或指标，可结合这些信息分析。不要承诺收益。"),
                             Map.of("role", "user", "content", prompt)
                     ),
                     "temperature", 0.4

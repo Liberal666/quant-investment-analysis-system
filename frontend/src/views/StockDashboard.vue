@@ -166,14 +166,14 @@
             </section>
             <section class="ai-chat-panel">
               <div class="data-panel-title">AI对话<span>DeepSeek</span></div>
-              <div class="ai-chat-log">
+              <div ref="riskAiLogRef" class="ai-chat-log">
                 <div v-for="(item, index) in riskAiMessages" :key="index" :class="['ai-chat-message', item.role]">
                   <strong>{{ item.role === 'user' ? '我' : 'AI' }}</strong>
                   <span>{{ item.content }}</span>
                 </div>
               </div>
               <form class="ai-chat-form" @submit.prevent="sendRiskAiMessage">
-                <input v-model.trim="riskAiQuestion" :disabled="riskAiLoading" placeholder="输入问题，例如：这只股票现在风险大吗？" />
+                <input v-model.trim="riskAiQuestion" :disabled="riskAiLoading" placeholder="可以任意提问，例如：帮我解释一下夏普比率" />
                 <button type="submit" :disabled="riskAiLoading || !riskAiQuestion">{{ riskAiLoading ? '回复中' : '发送' }}</button>
               </form>
             </section>
@@ -339,7 +339,7 @@
 </template>
 
 <script setup>
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import ChartPanel from '../components/ChartPanel.vue'
 import { benchmarkOptions, definitionLeft, definitionRight } from '../config/dashboardConfig'
 import { chartTheme, dynamicMax, dynamicMin, terminalLine } from '../utils/chartTools'
@@ -395,8 +395,9 @@ const riskKlines = ref([])
 const riskIndicators = ref([])
 const riskAiQuestion = ref('')
 const riskAiLoading = ref(false)
+const riskAiLogRef = ref(null)
 const riskAiMessages = ref([
-  { role: 'assistant', content: '可以围绕当前股票的K线、MACD、成交量和涨跌幅提问，我会结合页面行情给出风险参考。' }
+  { role: 'assistant', content: '你可以任意提问。若问题与当前股票有关，我会结合页面行情作为参考；其他问题也可以直接回答。' }
 ])
 const strategyForm = ref({ date: todayText(), code: '000001', type: '趋势跟踪', content: '' })
 const strategies = ref([])
@@ -888,6 +889,7 @@ async function sendRiskAiMessage() {
   if (!riskAiQuestion.value) return
   const question = riskAiQuestion.value
   riskAiMessages.value.push({ role: 'user', content: question })
+  await scrollRiskAiToBottom()
   riskAiQuestion.value = ''
   riskAiLoading.value = true
   try {
@@ -901,6 +903,15 @@ async function sendRiskAiMessage() {
     riskAiMessages.value.push({ role: 'assistant', content: err?.response?.data?.message || 'AI对话请求失败，请稍后重试。' })
   } finally {
     riskAiLoading.value = false
+    await scrollRiskAiToBottom()
+  }
+}
+
+async function scrollRiskAiToBottom() {
+  await nextTick()
+  const log = riskAiLogRef.value
+  if (log) {
+    log.scrollTop = log.scrollHeight
   }
 }
 

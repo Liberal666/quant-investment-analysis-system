@@ -176,14 +176,18 @@ public class StockServiceImpl implements StockService {
 
     @Override
     public AiChatResult chat(String code, String question, String context) {
-        String normalizedCode = normalizeCode(code);
         if (question == null || question.isBlank()) {
             throw new ResponseStatusException(BAD_REQUEST, "请输入对话内容");
         }
-        String prompt = "股票代码：" + normalizedCode
-                + "\n用户问题：" + question.trim()
-                + "\n页面行情摘要：" + (context == null ? "" : context.trim());
-        return new AiChatResult("deepseek", deepSeekClient.chat(prompt));
+        StringBuilder prompt = new StringBuilder();
+        if (code != null && code.matches("\\d{6}")) {
+            prompt.append("股票代码：").append(code).append('\n');
+        }
+        if (context != null && !context.isBlank()) {
+            prompt.append("页面参考信息：").append(context.trim()).append('\n');
+        }
+        prompt.append("用户问题：").append(question.trim());
+        return new AiChatResult("deepseek", deepSeekClient.chat(prompt.toString()));
     }
 
     private List<StockKline> loadBenchmark(String benchmarkCode, boolean autoSync) {
