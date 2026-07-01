@@ -17,6 +17,7 @@ import java.nio.charset.Charset;
 import java.time.Duration;
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 
@@ -32,7 +33,7 @@ public class SinaFinanceClient {
             String symbol = toSinaSymbol(code);
             String encoded = URLEncoder.encode(symbol, StandardCharsets.UTF_8);
             String url = "https://money.finance.sina.com.cn/quotes_service/api/json_v2.php/"
-                    + "CN_MarketData.getKLineData?symbol=" + encoded + "&scale=240&ma=no&datalen=120";
+                    + "CN_MarketData.getKLineData?symbol=" + encoded + "&scale=240&ma=no&datalen=430";
             HttpRequest request = HttpRequest.newBuilder(URI.create(url))
                     .timeout(Duration.ofSeconds(8))
                     .GET()
@@ -41,7 +42,7 @@ public class SinaFinanceClient {
             if (response.statusCode() != 200 || response.body().isBlank()) {
                 return List.of();
             }
-            return parseKlines(code, response.body());
+            return fillLastYear(code, parseKlines(code, response.body()));
         } catch (Exception ex) {
             return List.of();
         }
@@ -105,6 +106,40 @@ public class SinaFinanceClient {
             klines.add(kline);
         }
         return klines;
+    }
+
+    private List<StockKline> fillLastYear(String code, List<StockKline> source) {
+        if (source.isEmpty()) {
+            return source;
+        }
+        List<StockKline> sorted = source.stream()
+                .sorted(Comparator.comparing(StockKline::getDate))
+                .toList();
+        LocalDate end = LocalDate.now();
+        LocalDate start = end.minusDays(364);
+        StockKline previous = sorted.get(0);
+        List<StockKline> result = new ArrayList<>();
+        int index = 0;
+        for (LocalDate day = start; !day.isAfter(end); day = day.plusDays(1)) {
+            while (index < sorted.size() && !sorted.get(index).getDate().isAfter(day)) {
+                previous = sorted.get(index);
+                index++;
+            }
+            result.add(copyForDate(code, previous, day));
+        }
+        return result;
+    }
+
+    private StockKline copyForDate(String code, StockKline source, LocalDate date) {
+        StockKline kline = new StockKline();
+        kline.setCode(code);
+        kline.setDate(date);
+        kline.setOpen(source.getOpen());
+        kline.setHigh(source.getHigh());
+        kline.setLow(source.getLow());
+        kline.setClose(source.getClose());
+        kline.setVolume(source.getVolume());
+        return kline;
     }
 
     private StockQuote parseQuote(String code, String body) {

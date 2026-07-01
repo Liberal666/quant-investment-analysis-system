@@ -17,15 +17,23 @@ public interface StockService {
 
     List<StockKline> getKlines(String code);
 
+    List<StockKline> getKlines(String code, boolean autoSync);
+
     List<StockIndicator> getIndicators(String code);
+
+    List<StockIndicator> getIndicators(String code, boolean autoSync);
 
     StockQuote getQuote(String code);
 
     CorrelationResult getCorrelation(String code, String benchmarkCode);
 
+    CorrelationResult getCorrelation(String code, String benchmarkCode, boolean autoSync);
+
     int sync(String code);
 
     AiAnalysisResult analyze(String code);
+
+    AiAnalysisResult analyze(String code, boolean autoSync);
 
     AiChatResult chat(String code, String question, String context);
 }

@@ -74,9 +74,16 @@ public class StockServiceImpl implements StockService {
 
     @Override
     public List<StockKline> getKlines(String code) {
-        syncIfStale(code);
+        return getKlines(code, true);
+    }
+
+    @Override
+    public List<StockKline> getKlines(String code, boolean autoSync) {
+        if (autoSync) {
+            syncIfStale(code);
+        }
         List<StockKline> klines = klineMapper.findByCode(code);
-        if (klines.isEmpty()) {
+        if (autoSync && klines.isEmpty()) {
             sync(code);
             klines = klineMapper.findByCode(code);
         }
@@ -85,9 +92,16 @@ public class StockServiceImpl implements StockService {
 
     @Override
     public List<StockIndicator> getIndicators(String code) {
-        syncIfStale(code);
+        return getIndicators(code, true);
+    }
+
+    @Override
+    public List<StockIndicator> getIndicators(String code, boolean autoSync) {
+        if (autoSync) {
+            syncIfStale(code);
+        }
         List<StockIndicator> indicators = indicatorMapper.findByCode(code);
-        if (indicators.isEmpty()) {
+        if (autoSync && indicators.isEmpty()) {
             sync(code);
             indicators = indicatorMapper.findByCode(code);
         }
@@ -103,9 +117,14 @@ public class StockServiceImpl implements StockService {
 
     @Override
     public CorrelationResult getCorrelation(String code, String benchmarkCode) {
-        List<StockKline> stock = getKlines(code);
+        return getCorrelation(code, benchmarkCode, true);
+    }
+
+    @Override
+    public CorrelationResult getCorrelation(String code, String benchmarkCode, boolean autoSync) {
+        List<StockKline> stock = getKlines(code, autoSync);
         String normalizedBenchmark = normalizeCode(benchmarkCode);
-        List<StockKline> benchmark = loadBenchmark(normalizedBenchmark);
+        List<StockKline> benchmark = loadBenchmark(normalizedBenchmark, autoSync);
         int size = Math.min(stock.size(), benchmark.size());
         List<Double> stockReturns = new ArrayList<>();
         List<Double> indexReturns = new ArrayList<>();
@@ -128,11 +147,12 @@ public class StockServiceImpl implements StockService {
         if (klines.isEmpty()) {
             klines = MockStockData.klines(code);
         }
+        indicatorMapper.deleteByCode(code);
+        klineMapper.deleteByCode(code);
         for (StockKline kline : klines) {
             klineMapper.upsert(kline);
         }
         List<StockIndicator> indicators = IndicatorCalculator.calculate(code, klines);
-        indicatorMapper.deleteByCode(code);
         for (StockIndicator indicator : indicators) {
             indicatorMapper.upsert(indicator);
         }
@@ -141,8 +161,13 @@ public class StockServiceImpl implements StockService {
 
     @Override
     public AiAnalysisResult analyze(String code) {
-        List<StockKline> klines = getKlines(code);
-        CorrelationResult correlation = getCorrelation(code, BENCHMARK_CODE);
+        return analyze(code, true);
+    }
+
+    @Override
+    public AiAnalysisResult analyze(String code, boolean autoSync) {
+        List<StockKline> klines = getKlines(code, autoSync);
+        CorrelationResult correlation = getCorrelation(code, BENCHMARK_CODE, autoSync);
         StockKline first = klines.get(0);
         StockKline last = klines.get(klines.size() - 1);
         double totalReturn = returnRate(first, last);
@@ -161,14 +186,19 @@ public class StockServiceImpl implements StockService {
         return new AiChatResult("deepseek", deepSeekClient.chat(prompt));
     }
 
-    private List<StockKline> loadBenchmark(String benchmarkCode) {
-        syncIfStale(benchmarkCode);
+    private List<StockKline> loadBenchmark(String benchmarkCode, boolean autoSync) {
+        if (autoSync) {
+            syncIfStale(benchmarkCode);
+        }
         List<StockKline> benchmark = klineMapper.findByCode(benchmarkCode);
         if (!benchmark.isEmpty()) {
             return benchmark;
         }
-        benchmark = sinaFinanceClient.fetchDailyKlines(benchmarkCode);
-        return benchmark.isEmpty() ? MockStockData.benchmarkKlines() : benchmark;
+        if (autoSync) {
+            benchmark = sinaFinanceClient.fetchDailyKlines(benchmarkCode);
+            return benchmark.isEmpty() ? MockStockData.benchmarkKlines(benchmarkCode) : benchmark;
+        }
+        return MockStockData.benchmarkKlines(benchmarkCode);
     }
 
     private StockProduct buildProduct(String code) {

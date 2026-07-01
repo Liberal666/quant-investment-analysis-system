@@ -3,9 +3,9 @@ server:
 
 spring:
   datasource:
-    url: ${DB_URL:jdbc:mysql://localhost:3306/quant_invest_data?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai}
-    username: ${DB_USERNAME:root}
-    password: ${DB_PASSWORD:123456}
+    url: jdbc:mysql://localhost:3306/quant_invest_data?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai
+    username: root
+    password: 12345678
     driver-class-name: com.mysql.cj.jdbc.Driver
 
 mybatis:
@@ -13,6 +13,6 @@ mybatis:
     map-underscore-to-camel-case: true
 
 deepseek:
-  api-key: ${DEEPSEEK_API_KEY:}
-  base-url: ${DEEPSEEK_BASE_URL:https://api.deepseek.com}
-  model: ${DEEPSEEK_MODEL:deepseek-v4-flash}
+  api-key: sk-d8e00e3b72ee4fd0b346c2f69f6adbab
+  base-url: https://api.deepseek.com
+  model: deepseek-v4-flash

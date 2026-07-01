@@ -26,6 +26,8 @@ STOCKS = {
 
 BENCHMARKS = {
     "000300": "沪深300",
+    "399001": "深证成指",
+    "399006": "创业板指",
 }
 
 
@@ -199,7 +201,6 @@ CREATE TABLE IF NOT EXISTS sys_user (
   can_manage_users TINYINT(1) NOT NULL DEFAULT 0
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 """,
-        "ALTER TABLE sys_user ADD COLUMN IF NOT EXISTS password_hash VARCHAR(128) NOT NULL DEFAULT '8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92' AFTER role;",
         """
 CREATE TABLE IF NOT EXISTS user_stock (
   id BIGINT PRIMARY KEY AUTO_INCREMENT,
@@ -220,18 +221,12 @@ CREATE TABLE IF NOT EXISTS trade_strategy (
   INDEX idx_trade_strategy_username_date (username, trade_date)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 """,
-        "DELETE FROM trade_strategy;",
-        "DELETE FROM user_stock;",
         "DELETE FROM stock_indicator;",
         "DELETE FROM stock_kline;",
-        "DELETE FROM sys_user;",
-        "ALTER TABLE trade_strategy AUTO_INCREMENT = 1;",
-        "ALTER TABLE user_stock AUTO_INCREMENT = 1;",
         "ALTER TABLE stock_indicator AUTO_INCREMENT = 1;",
         "ALTER TABLE stock_kline AUTO_INCREMENT = 1;",
-        "ALTER TABLE sys_user AUTO_INCREMENT = 1;",
         """
-INSERT INTO sys_user(username, display_name, role, password_hash, can_view_data, can_manage_users) VALUES
+INSERT IGNORE INTO sys_user(username, display_name, role, password_hash, can_view_data, can_manage_users) VALUES
 ('viewer', '普通用户', 'USER', '8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92', 1, 0),
 ('admin', '管理员', 'ADMIN', '8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92', 1, 1);
 """,
@@ -280,7 +275,7 @@ INSERT INTO sys_user(username, display_name, role, password_hash, can_view_data,
     for username in ("viewer", "admin"):
         for code in STOCKS:
             user_stock_rows.append(f"('{username}', '{code}')")
-    sql.append("INSERT INTO user_stock(username, code) VALUES\n" + ",\n".join(user_stock_rows) + ";")
+    sql.append("INSERT IGNORE INTO user_stock(username, code) VALUES\n" + ",\n".join(user_stock_rows) + ";")
     return "\n".join(sql)
 
 
@@ -298,6 +293,13 @@ def main():
         all_indicators[code] = calculate_indicators(code, rows)
 
     sql = build_sql(all_rows, all_indicators)
+    if "--write-only" in sys.argv:
+        with open("database/schema.sql", "w", encoding="utf-8") as file:
+            file.write(sql)
+            file.write("\n")
+        print(f"Wrote database/schema.sql with {len(STOCKS)} stocks plus {len(BENCHMARKS)} benchmark, {len(next(iter(all_rows.values())))} days each.")
+        return
+
     command = [
         "mysql",
         f"-u{MYSQL_USER}",

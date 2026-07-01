@@ -16,8 +16,12 @@ public final class MockStockData {
         return generate(code, 168.0, 0.006, 0.018);
     }
 
-    public static List<StockKline> benchmarkKlines() {
-        return generate("000300", 3900.0, 0.002, 0.009);
+    public static List<StockKline> benchmarkKlines(String code) {
+        return switch (code) {
+            case "399001" -> generate(code, 15800.0, 0.0022, 0.010);
+            case "399006" -> generate(code, 4200.0, 0.0026, 0.014);
+            default -> generate(code, 3900.0, 0.002, 0.009);
+        };
     }
 
     private static List<StockKline> generate(String code, double start, double trend, double wave) {

@@ -1,0 +1,56 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="420" viewBox="0 0 1000 420" role="img" aria-labelledby="title desc">
+  <title id="title">市场行情预览</title>
+  <desc id="desc">深色股票行情表，展示指数代码、名称、最新价、涨跌幅和走势图。</desc>
+  <defs>
+    <filter id="softShadow" x="-12%" y="-18%" width="124%" height="136%">
+      <feDropShadow dx="0" dy="24" stdDeviation="24" flood-color="#000000" flood-opacity=".34"/>
+    </filter>
+    <linearGradient id="panel" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#202426" stop-opacity=".94"/>
+      <stop offset="1" stop-color="#111517" stop-opacity=".92"/>
+    </linearGradient>
+    <radialGradient id="glow" cx=".46" cy=".18" r=".9">
+      <stop offset="0" stop-color="#ffffff" stop-opacity=".08"/>
+      <stop offset=".44" stop-color="#1b2630" stop-opacity=".16"/>
+      <stop offset="1" stop-color="#05080b" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="1000" height="420" fill="none"/>
+  <g filter="url(#softShadow)">
+    <rect x="34" y="36" width="932" height="348" rx="10" fill="url(#panel)" stroke="#3b454b" stroke-width="2"/>
+    <rect x="34" y="36" width="932" height="348" rx="10" fill="url(#glow)"/>
+  </g>
+  <g fill="none" stroke="#30373b" stroke-width="1.2">
+    <path d="M34 106H966"/>
+    <path d="M34 168H966"/>
+    <path d="M34 238H966"/>
+    <path d="M34 308H966"/>
+  </g>
+  <text x="58" y="84" fill="#e4e8eb" font-family="Microsoft YaHei, PingFang SC, Arial, sans-serif" font-size="28" font-weight="800">市场行情预览</text>
+  <g fill="#adb5bb" font-family="Microsoft YaHei, PingFang SC, Arial, sans-serif" font-size="20" font-weight="800">
+    <text x="78" y="146">代码</text>
+    <text x="226" y="146">名称</text>
+    <text x="420" y="146">最新价</text>
+    <text x="586" y="146">涨跌幅</text>
+    <text x="792" y="146">走势图</text>
+  </g>
+  <g font-family="Microsoft YaHei, PingFang SC, Arial, sans-serif" font-size="24" fill="#d7dde1">
+    <text x="58" y="214">000001</text>
+    <text x="204" y="214" font-weight="800">上证指数</text>
+    <text x="396" y="214">3,286.62</text>
+    <text x="574" y="214" fill="#ff3e38">+1.35%</text>
+    <text x="58" y="284">399300</text>
+    <text x="204" y="284" font-weight="800">沪深300</text>
+    <text x="396" y="284">3,842.21</text>
+    <text x="574" y="284" fill="#ff3e38">+0.84%</text>
+    <text x="58" y="354">000688</text>
+    <text x="204" y="354" font-weight="800">科创50</text>
+    <text x="406" y="354">891.24</text>
+    <text x="574" y="354" fill="#55c653">-0.42%</text>
+  </g>
+  <g fill="none" stroke="#2e79e6" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M730 213l8-10 7 8 8-13 8 3 8-18 8 10 8-4 8 14 8-9 8 2 8 12 8-9 8 2 8-3 8-11 8 5 8-12 8 14 8-3 8 8 8-5 8 2 8-12 8 7 8-2"/>
+    <path d="M730 283l8-11 7 9 8-13 8 4 8-17 8 11 8-4 8 13 8-8 8 1 8 10 8-8 8 3 8-4 8-10 8 5 8-12 8 13 8-4 8 8 8-4 8 2 8-10 8 6 8-2"/>
+    <path d="M730 352l8-10 7 8 8-14 8 5 8-18 8 12 8-4 8 12 8-8 8 2 8 11 8-8 8 3 8-4 8-10 8 5 8-13 8 14 8-4 8 8 8-4 8 3 8-11 8 7 8-2"/>
+  </g>
+</svg>

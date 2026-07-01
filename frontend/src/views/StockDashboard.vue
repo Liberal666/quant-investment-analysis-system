@@ -5,11 +5,8 @@
       <div class="brand-title">拼一次富三代、拼命才能不失败</div>
       <div class="role-switch">
         当前用户:
-        <select v-model="currentUsername" @change="loadCurrentUser">
-          <option v-if="!['viewer', 'admin'].includes(currentUsername)" :value="currentUsername">{{ currentUser.displayName || currentUsername }}</option>
-          <option value="viewer">普通用户</option>
-          <option value="admin">管理员</option>
-        </select>
+        <strong>{{ currentUser.displayName || currentUser.username }}</strong>
+        <button type="button" @click="emit('switch-user')">切换用户</button>
       </div>
     </header>
 
@@ -232,6 +229,7 @@
         </form>
 
         <p v-if="error" class="terminal-error">{{ error }}</p>
+        <p v-if="statusMessage" class="terminal-status">{{ statusMessage }}</p>
 
         <section class="table-zone">
           <section class="data-panel product-table">
@@ -343,6 +341,10 @@
 <script setup>
 import { computed, onMounted, ref, watch } from 'vue'
 import ChartPanel from '../components/ChartPanel.vue'
+import { benchmarkOptions, definitionLeft, definitionRight } from '../config/dashboardConfig'
+import { chartTheme, dynamicMax, dynamicMin, terminalLine } from '../utils/chartTools'
+import { normalizeDate, sampleByPeriod, todayText } from '../utils/dateTools'
+import { formatIndicator, formatMoney, formatPercent, formatQuote, formatVolume, numberClass, numberOrNull } from '../utils/formatters'
 import {
   addUserStock,
   askRiskAi,
@@ -361,11 +363,12 @@ import {
 } from '../api/stock'
 
 const props = defineProps({
-  initialUsername: {
-    type: String,
-    default: 'viewer'
+  initialUser: {
+    type: Object,
+    default: () => ({ username: 'viewer', displayName: '普通用户', role: 'USER', canViewData: true, canManageUsers: false })
   }
 })
+const emit = defineEmits(['switch-user'])
 
 const code = ref('000001')
 const klines = ref([])
@@ -374,16 +377,16 @@ const correlation = ref({ coefficient: 0, points: [] })
 const analysis = ref({ source: 'local', content: '' })
 const products = ref([])
 const users = ref([])
-const startDateInput = ref('2024-01-02')
+const startDateInput = ref('2025-07-01')
 const endDateInput = ref(todayText())
 const period = ref('每日')
 const benchmarkCode = ref('000300')
 const codeInput = ref('000001')
-const currentUsername = ref(props.initialUsername)
-const currentUser = ref({ username: 'viewer', displayName: '普通用户', role: 'USER', canViewData: true, canManageUsers: false })
+const currentUser = ref(props.initialUser)
 const activeTab = ref('data')
 const loading = ref(false)
 const error = ref('')
+const statusMessage = ref('')
 const riskCode = ref('000001')
 const riskPeriod = ref('每日')
 const riskCount = ref(80)
@@ -401,22 +404,6 @@ const reportStartDate = ref('2024-01-02')
 const reportEndDate = ref(todayText())
 const reportCodes = ref(['000001', '600519'])
 const reportRows = ref([])
-const benchmarkOptions = [
-  { code: '000300', name: '沪深300' },
-  { code: '399001', name: '深证成指' },
-  { code: '399006', name: '创业板指' }
-]
-const definitionLeft = [
-  { name: '基金收益', desc: '展示选中股票与比较基准在所选区间内的累计收益走势，用于观察超额收益和阶段性波动。' },
-  { name: '净值变动', desc: '展示每期收益柱状图和累计收益曲线，用于判断收益来源、波动节奏和回撤变化。' },
-  { name: '相关性分析', desc: '用散点图展示股票收益与基准收益的同步程度，Pearson系数越接近1表示同涨同跌越明显。' }
-]
-const definitionRight = [
-  { name: 'K线与MA均线', desc: 'K线展示开高低收价格，MA5/MA10/MA20均线用于观察短中期趋势方向。' },
-  { name: 'MACD指标', desc: 'DIF、DEA和MACD柱用于判断趋势强弱，红柱扩张通常表示动能增强，绿柱扩张表示动能转弱。' },
-  { name: 'RSI指标', desc: 'RSI反映价格强弱，70附近常视为偏热，30附近常视为偏弱，需结合趋势综合判断。' }
-]
-
 const filteredKlines = computed(() => sampleByPeriod(filterByDate(klines.value), period.value))
 const filteredIndicators = computed(() => {
   const allowedDates = new Set(filteredKlines.value.map(item => item.date))
@@ -573,24 +560,6 @@ const historyRows = computed(() => filteredKlines.value.slice(-16).reverse().map
   }
 }))
 
-const chartTheme = {
-  backgroundColor: 'transparent',
-  textStyle: { color: '#dbe6ee' },
-  color: ['#df0000', '#00a6e7', '#ffe000', '#00e000'],
-  tooltip: { trigger: 'axis', backgroundColor: '#111', borderColor: '#777', textStyle: { color: '#eee' } },
-  legend: { bottom: 4, textStyle: { color: '#e4edf5', fontWeight: 700 } },
-  grid: { left: 52, right: 18, top: 36, bottom: 64 },
-  xAxis: {
-    axisLine: { lineStyle: { color: '#6a6f74' } },
-    axisLabel: { color: '#dbe6ee', fontWeight: 700 },
-    splitLine: { show: false }
-  },
-  yAxis: {
-    axisLine: { lineStyle: { color: '#6a6f74' } },
-    axisLabel: { color: '#dbe6ee', fontWeight: 700, formatter: value => `${value}%` },
-    splitLine: { lineStyle: { color: '#616161' } }
-  }
-}
 const fundOption = computed(() => ({
   ...chartTheme,
   xAxis: { ...chartTheme.xAxis, type: 'category', data: dates.value.slice(1) },
@@ -735,32 +704,13 @@ const scatterOption = computed(() => ({
   ]
 }))
 
-function terminalLine(name, data, color) {
-  return {
-    name,
-    type: 'line',
-    data,
-    showSymbol: false,
-    smooth: true,
-    lineStyle: { width: 2, color }
-  }
-}
-
-function dynamicMin(values) {
-  const numbers = values.map(item => Number(item) * 100).filter(Number.isFinite)
-  if (!numbers.length) return -50
-  return Math.floor((Math.min(...numbers, 0) - 8) / 10) * 10
-}
-
-function dynamicMax(values) {
-  const numbers = values.map(item => Number(item) * 100).filter(Number.isFinite)
-  if (!numbers.length) return 50
-  return Math.ceil((Math.max(...numbers, 0) + 8) / 10) * 10
-}
-
-async function loadAll() {
+async function loadAll(options = {}) {
+  const { autoSync = false, showStatus = true } = options
   loading.value = true
   error.value = ''
+  if (showStatus) {
+    statusMessage.value = ''
+  }
   try {
     if (!currentUser.value.canViewData) {
       throw new Error('当前用户没有数据访问权限')
@@ -768,19 +718,22 @@ async function loadAll() {
     if (codeInput.value) {
       code.value = codeInput.value
     }
-    const [klineRes, indicatorRes] = await Promise.all([getKline(code.value), getIndicator(code.value)])
+    const [klineRes, indicatorRes] = await Promise.all([getKline(code.value, autoSync), getIndicator(code.value, autoSync)])
     klines.value = klineRes.data
     indicators.value = indicatorRes.data
-    getCorrelation(code.value, benchmarkCode.value).then(res => {
+    getCorrelation(code.value, benchmarkCode.value, autoSync).then(res => {
       correlation.value = res.data
     }).catch(() => {
       correlation.value = { coefficient: 0, points: [] }
     })
-    getAnalysis(code.value).then(res => {
+    getAnalysis(code.value, autoSync).then(res => {
       analysis.value = res.data
     }).catch(() => {
       analysis.value = { source: 'local', content: 'AI分析暂不可用，基础行情数据已加载。' }
     })
+    if (showStatus) {
+      statusMessage.value = `已按 ${startDateInput.value} 至 ${endDateInput.value}、${period.value}、${selectedBenchmarkName.value} 刷新净值展示`
+    }
   } catch (err) {
     error.value = err?.message || '请求失败，请确认后端服务是否启动'
   } finally {
@@ -790,7 +743,7 @@ async function loadAll() {
 
 async function loadProducts() {
   try {
-    const res = await getProducts(currentUsername.value)
+    const res = await getProducts()
     products.value = res.data
   } catch (err) {
     products.value = []
@@ -809,7 +762,7 @@ async function loadUsers() {
 
 async function loadStrategies() {
   try {
-    const res = await getStrategies(currentUsername.value)
+    const res = await getStrategies()
     strategies.value = res.data
   } catch (err) {
     strategies.value = []
@@ -818,7 +771,7 @@ async function loadStrategies() {
 
 async function loadCurrentUser(reload = true) {
   try {
-    const res = await getCurrentUser(currentUsername.value)
+    const res = await getCurrentUser()
     currentUser.value = res.data
     error.value = ''
     if (!currentUser.value.canManageUsers && activeTab.value === 'system') {
@@ -829,7 +782,6 @@ async function loadCurrentUser(reload = true) {
       await loadAll()
     }
   } catch (err) {
-    currentUser.value = { username: currentUsername.value, displayName: '未知用户', role: 'USER', canViewData: true, canManageUsers: false }
     error.value = '用户权限加载失败，请检查 MySQL 连接配置'
   }
 }
@@ -845,7 +797,7 @@ async function loadNavByCode() {
 }
 
 async function savePermission(user) {
-  await updateUserPermission(currentUsername.value, user)
+  await updateUserPermission(user)
   await loadUsers()
   await loadCurrentUser()
 }
@@ -853,15 +805,18 @@ async function savePermission(user) {
 async function syncAndReload() {
   loading.value = true
   error.value = ''
+  statusMessage.value = ''
   try {
     if (codeInput.value) {
       code.value = codeInput.value
     }
-    await syncStock(code.value)
+    const res = await syncStock(code.value)
     await loadProducts()
-    await loadAll()
+    await loadAll({ autoSync: false, showStatus: false })
+    statusMessage.value = `同步成功，股票 ${code.value} 已新增/更新 ${res.data.count || 0} 条K线数据，并已自动更新净值`
   } catch (err) {
-    error.value = err?.message || '同步失败'
+    error.value = err?.response?.data?.message || err?.message || '同步失败'
+  } finally {
     loading.value = false
   }
 }
@@ -874,7 +829,7 @@ async function addStock() {
     if (!/^\d{6}$/.test(nextCode)) {
       throw new Error('请输入正确的6位股票代码')
     }
-    await addUserStock(currentUsername.value, nextCode)
+    await addUserStock(nextCode)
     await loadProducts()
     code.value = nextCode
     codeInput.value = nextCode
@@ -915,7 +870,7 @@ async function saveStrategy() {
   }
   try {
     await saveStrategyApi({
-      username: currentUsername.value,
+      username: currentUser.value.username,
       tradeDate: strategyForm.value.date,
       code: strategyForm.value.code,
       type: strategyForm.value.type,
@@ -984,72 +939,10 @@ function toggleReportCodes() {
   reportCodes.value = allReportCodesSelected.value ? [] : products.value.map(item => item.code)
 }
 
-function formatPercent(value) {
-  return `${(Number(value || 0) * 100).toFixed(2)}%`
-}
-
-function formatMoney(value) {
-  return Number(value || 0).toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-}
-
-function formatQuote(value) {
-  return value === null || value === undefined || value === '' ? '--' : Number(value).toFixed(2)
-}
-
-function formatVolume(value) {
-  return Number(value || 0).toLocaleString('zh-CN')
-}
-
-function formatIndicator(value) {
-  return value === null || value === undefined ? '--' : Number(value).toFixed(2)
-}
-
-function numberClass(value) {
-  return Number(value) >= 0 ? 'up' : 'down'
-}
-
-function numberOrNull(value) {
-  return value === null || value === undefined ? null : Number(value)
-}
-
 function filterByDate(rows) {
   const start = normalizeDate(startDateInput.value)
   const end = normalizeDate(endDateInput.value)
   return rows.filter(item => (!start || item.date >= start) && (!end || item.date <= end))
-}
-
-function sampleByPeriod(rows, value) {
-  if (value === '每日') {
-    return rows
-  }
-  const result = []
-  const seen = new Set()
-  for (let i = rows.length - 1; i >= 0; i--) {
-    const date = rows[i].date
-    const key = value === '每周' ? `${date.slice(0, 4)}-W${weekNumber(date)}` : date.slice(0, 7)
-    if (!seen.has(key)) {
-      seen.add(key)
-      result.unshift(rows[i])
-    }
-  }
-  return result
-}
-
-function normalizeDate(value) {
-  return value ? value.replaceAll('/', '-') : ''
-}
-
-function todayText() {
-  const date = new Date()
-  const month = String(date.getMonth() + 1).padStart(2, '0')
-  const day = String(date.getDate()).padStart(2, '0')
-  return `${date.getFullYear()}-${month}-${day}`
-}
-
-function weekNumber(dateText) {
-  const date = new Date(dateText)
-  const first = new Date(date.getFullYear(), 0, 1)
-  return Math.ceil((((date - first) / 86400000) + first.getDay() + 1) / 7)
 }
 
 onMounted(async () => {

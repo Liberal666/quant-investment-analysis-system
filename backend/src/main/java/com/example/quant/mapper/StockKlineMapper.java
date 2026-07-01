@@ -1,6 +1,7 @@
 package com.example.quant.mapper;
 
 import com.example.quant.entity.StockKline;
+import org.apache.ibatis.annotations.Delete;
 import org.apache.ibatis.annotations.Insert;
 import org.apache.ibatis.annotations.Select;
 
@@ -16,6 +17,9 @@ public interface StockKlineMapper {
 
     @Select("SELECT MAX(date) FROM stock_kline WHERE code = #{code}")
     LocalDate findLatestDate(String code);
+
+    @Delete("DELETE FROM stock_kline WHERE code = #{code}")
+    void deleteByCode(String code);
 
     @Insert("""
             INSERT INTO stock_kline(code, date, open, high, low, close, volume)

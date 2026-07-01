@@ -7,11 +7,14 @@ import com.example.quant.entity.StockIndicator;
 import com.example.quant.entity.StockKline;
 import com.example.quant.entity.StockProduct;
 import com.example.quant.entity.StockQuote;
+import com.example.quant.entity.SysUser;
+import com.example.quant.service.AuthSessionService;
 import com.example.quant.service.StockService;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -24,30 +27,36 @@ import java.util.Map;
 @RequestMapping("/api/stock")
 public class StockController {
     private final StockService stockService;
+    private final AuthSessionService authSessionService;
 
-    public StockController(StockService stockService) {
+    public StockController(StockService stockService, AuthSessionService authSessionService) {
         this.stockService = stockService;
+        this.authSessionService = authSessionService;
     }
 
     @GetMapping("/products")
-    public List<StockProduct> products(@RequestParam(defaultValue = "viewer") String username) {
-        return stockService.getProducts(username);
+    public List<StockProduct> products(@RequestHeader(value = "Authorization", required = false) String authorization) {
+        SysUser user = authSessionService.requireUser(authorization);
+        return stockService.getProducts(user.getUsername());
     }
 
     @PostMapping("/user-stock")
-    public StockProduct addUserStock(@RequestParam(defaultValue = "viewer") String username,
+    public StockProduct addUserStock(@RequestHeader(value = "Authorization", required = false) String authorization,
                                      @RequestParam String code) {
-        return stockService.addUserStock(username, code);
+        SysUser user = authSessionService.requireUser(authorization);
+        return stockService.addUserStock(user.getUsername(), code);
     }
 
     @GetMapping("/kline")
-    public List<StockKline> kline(@RequestParam String code) {
-        return stockService.getKlines(code);
+    public List<StockKline> kline(@RequestParam String code,
+                                  @RequestParam(defaultValue = "true") boolean sync) {
+        return stockService.getKlines(code, sync);
     }
 
     @GetMapping("/indicator")
-    public List<StockIndicator> indicator(@RequestParam String code) {
-        return stockService.getIndicators(code);
+    public List<StockIndicator> indicator(@RequestParam String code,
+                                          @RequestParam(defaultValue = "true") boolean sync) {
+        return stockService.getIndicators(code, sync);
     }
 
     @GetMapping("/quote")
@@ -57,8 +66,9 @@ public class StockController {
 
     @GetMapping("/correlation")
     public CorrelationResult correlation(@RequestParam String code,
-                                         @RequestParam(defaultValue = "000300") String benchmarkCode) {
-        return stockService.getCorrelation(code, benchmarkCode);
+                                         @RequestParam(defaultValue = "000300") String benchmarkCode,
+                                         @RequestParam(defaultValue = "true") boolean sync) {
+        return stockService.getCorrelation(code, benchmarkCode, sync);
     }
 
     @PostMapping("/sync")
@@ -68,8 +78,9 @@ public class StockController {
     }
 
     @GetMapping("/analysis")
-    public AiAnalysisResult analysis(@RequestParam String code) {
-        return stockService.analyze(code);
+    public AiAnalysisResult analysis(@RequestParam String code,
+                                     @RequestParam(defaultValue = "true") boolean sync) {
+        return stockService.analyze(code, sync);
     }
 
     @PostMapping("/chat")
