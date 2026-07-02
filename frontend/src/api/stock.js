@@ -4,7 +4,7 @@ import axios from 'axios'
  * 后端接口模块：集中维护请求地址、登录 token 和 REST API 调用。
  */
 const request = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080',
+  baseURL: import.meta.env.VITE_API_BASE_URL || (import.meta.env.PROD ? '' : 'http://localhost:8080'),
   timeout: 15000
 })
 
