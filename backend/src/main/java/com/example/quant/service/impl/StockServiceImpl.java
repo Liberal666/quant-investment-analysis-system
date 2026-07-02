@@ -54,11 +54,6 @@ public class StockServiceImpl implements StockService {
     @Override
     public List<StockProduct> getProducts(String username) {
         List<String> codes = userStockMapper.findCodesByUsername(username);
-        if (codes.isEmpty()) {
-            codes = klineMapper.findCodes().stream()
-                    .filter(code -> !BENCHMARK_CODE.equals(code))
-                    .toList();
-        }
         return codes.stream()
                 .map(this::buildProduct)
                 .toList();
@@ -70,6 +65,12 @@ public class StockServiceImpl implements StockService {
         sync(normalizedCode);
         userStockMapper.upsert(username, normalizedCode);
         return buildProduct(normalizedCode);
+    }
+
+    @Override
+    public void removeUserStock(String username, String code) {
+        String normalizedCode = normalizeCode(code);
+        userStockMapper.deleteByUsernameAndCode(username, normalizedCode);
     }
 
     @Override

@@ -15,6 +15,8 @@ public interface StockService {
 
     StockProduct addUserStock(String username, String code);
 
+    void removeUserStock(String username, String code);
+
     List<StockKline> getKlines(String code);
 
     List<StockKline> getKlines(String code, boolean autoSync);

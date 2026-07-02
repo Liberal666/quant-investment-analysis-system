@@ -15,6 +15,8 @@ import java.util.List;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 
 class StockServiceImplTest {
     @Test
@@ -66,6 +68,25 @@ class StockServiceImplTest {
         org.assertj.core.api.Assertions.assertThat(content)
                 .contains("请介绍一下什么是夏普比率")
                 .doesNotContain("股票代码：");
+    }
+
+    @Test
+    void removeUserStockDeletesOnlyCurrentUsersStockRelation() {
+        StockKlineMapper klineMapper = mock(StockKlineMapper.class);
+        StockIndicatorMapper indicatorMapper = mock(StockIndicatorMapper.class);
+        UserStockMapper userStockMapper = mock(UserStockMapper.class);
+        StockServiceImpl service = new StockServiceImpl(
+                klineMapper,
+                indicatorMapper,
+                userStockMapper,
+                new SinaFinanceClient(),
+                null
+        );
+
+        service.removeUserStock("viewer", "000001");
+
+        verify(userStockMapper).deleteByUsernameAndCode("viewer", "000001");
+        verifyNoInteractions(klineMapper, indicatorMapper);
     }
 
     private static StockKline kline(String code, LocalDate date) {

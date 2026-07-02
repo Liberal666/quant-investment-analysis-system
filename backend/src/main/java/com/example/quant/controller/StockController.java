@@ -12,6 +12,7 @@ import com.example.quant.service.AuthSessionService;
 import com.example.quant.service.StockService;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
@@ -45,6 +46,14 @@ public class StockController {
                                      @RequestParam String code) {
         SysUser user = authSessionService.requireUser(authorization);
         return stockService.addUserStock(user.getUsername(), code);
+    }
+
+    @DeleteMapping("/user-stock")
+    public Map<String, String> removeUserStock(@RequestHeader(value = "Authorization", required = false) String authorization,
+                                               @RequestParam String code) {
+        SysUser user = authSessionService.requireUser(authorization);
+        stockService.removeUserStock(user.getUsername(), code);
+        return Map.of("message", "stock removed");
     }
 
     @GetMapping("/kline")

@@ -226,6 +226,7 @@
           <button type="submit" :disabled="loading">更新净值</button>
           <button type="button" :disabled="loading" @click="syncAndReload">同步数据</button>
           <button type="button" :disabled="loading" @click="addStock">添加股票代码</button>
+          <button type="button" :disabled="loading || !code" @click="removeSelectedStock">删除股票</button>
         </form>
 
         <p v-if="error" class="terminal-error">{{ error }}</p>
@@ -357,6 +358,7 @@ import {
   getQuote,
   getUsers,
   getStrategies,
+  removeUserStock,
   saveStrategy as saveStrategyApi,
   syncStock,
   updateUserPermission
@@ -840,6 +842,39 @@ async function addStock() {
   } finally {
     loading.value = false
   }
+}
+
+async function removeStock(stockCode) {
+  if (!stockCode) return
+  loading.value = true
+  error.value = ''
+  statusMessage.value = ''
+  try {
+    await removeUserStock(stockCode)
+    await loadProducts()
+    if (code.value === stockCode) {
+      const nextCode = products.value[0]?.code || ''
+      code.value = nextCode
+      codeInput.value = nextCode
+      if (nextCode) {
+        await loadAll({ autoSync: false, showStatus: false })
+      } else {
+        klines.value = []
+        indicators.value = []
+        correlation.value = { coefficient: 0, points: [] }
+        analysis.value = { source: 'local', content: '' }
+      }
+    }
+    statusMessage.value = `已从当前账户删除股票 ${stockCode}`
+  } catch (err) {
+    error.value = err?.response?.data?.message || err?.message || '删除股票失败'
+  } finally {
+    loading.value = false
+  }
+}
+
+async function removeSelectedStock() {
+  await removeStock(code.value)
 }
 
 async function loadRisk() {

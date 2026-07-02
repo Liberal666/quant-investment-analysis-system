@@ -55,6 +55,10 @@ export function addUserStock(code) {
   return request.post('/api/stock/user-stock', null, { params: { code } })
 }
 
+export function removeUserStock(code) {
+  return request.delete('/api/stock/user-stock', { params: { code } })
+}
+
 export function getAnalysis(code, sync = true) {
   return request.get('/api/stock/analysis', { params: { code, sync } })
 }
